@@ -176,6 +176,61 @@ WITH dates AS (
       AND aps.royalty_fee_currency_symbol IN ('ETH','WETH')
 )
 
+, collaborations AS (
+    SELECT bc.value / 1e+18 as revenue, 1 as quantity
+    FROM ethereum.traces bc
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.tx_hash = 0x13c973087e5d0577b7edee854364285eaee949c3f8bcc8fd500f79e9f9844fea
+      AND bc.block_number = 16887424
+      AND bc.to = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    UNION ALL
+    SELECT bc.royalty_fee_amount, 1
+    FROM seaport_ethereum.trades bc
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address = 0xdcb1c3275ca97f148f6da1b0ee85bcb75cc9c5a4
+    UNION ALL
+    SELECT SUM(bc.amount_original * 0.85 / 2), cast(SUM(bc.number_of_items) as integer)
+    FROM nft.trades bc
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address = 0x1b6745f9a95b9ee195cff963dd6ef03dbf486257
+      AND cast(bc.token_id as varchar) = '3'
+      AND bc.tx_from = 0xfcbe1f6ec1c26c8f48bd835d650a3383ea1797c2
+    UNION ALL
+    -- Geometric Fluidity, Algorithmic Evolution, Genesis Special Editions
+    SELECT SUM(bc.royalty_fee_amount), cast(SUM(bc.number_of_items) as integer)
+    FROM nft.trades bc
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address IN (
+          0x16e9cfda70c72ef12c6a96ba4261bea3d2865044,
+          0x5d6a7196d14408278d40ffdfe4cb697a6799ca88,
+          0x4a075606591369c41d7e90d13a1e094b3058683e
+      )
+      AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    UNION ALL
+    -- Pepe's Multidimensional Leap
+    SELECT SUM(bc.royalty_fee_amount), 1
+    FROM nft.trades bc
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address = 0xe70659b717112ac4e14284d0db2f5d5703df8e43
+      AND bc.token_id = 306
+      AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    UNION ALL
+    -- Alchemist's Playroom (1155) — 50 tokens in Grails V (Artist: Botto)
+    SELECT SUM(bc.royalty_fee_amount), cast(SUM(bc.number_of_items) as integer)
+    FROM nft.trades bc
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address = 0x92a50fe6ede411bd26e171b97472e24d245349b8
+      AND bc.token_id IN (3,21,49,61,76,78,83,93,216,238,255,258,266,269,273,278,279,286,293,
+          304,314,327,328,334,343,351,360,373,376,379,385,390,393,394,395,397,
+          400,401,404,407,409,411,412,413,416,417,418,419,420,421)
+      AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+)
+
+, collab_totals AS (
+    SELECT SUM(quantity) as collab_quantity
+    FROM collaborations
+)
+
 , burn_totals AS (
     SELECT ROUND(SUM(bb.value * power(10, -18)), 4) as total_botto_burnt
     FROM botto_ethereum.Botto_evt_Transfer bb
@@ -200,7 +255,7 @@ SELECT
             + COALESCE(pt.pipe_primary, 0) + COALESCE(pst.pipe_secondary, 0)
             + COALESCE(pass.pass_primary, 0) + COALESCE(passs.pass_secondary, 0), 4) as grand_total_revenue
     , art.artworks_sold_primary as artworks_sold
-    , COALESCE(pt.pipe_primary_qty, 0) as pipes_minted
+    , COALESCE(pt.pipe_primary_qty, 0) + COALESCE(ct.collab_quantity, 0) as non_one_of_one_sold
     , burn.total_botto_burnt
     , cp.botto_price as current_botto_price
     -- Per-period breakdowns
@@ -219,5 +274,6 @@ CROSS JOIN pipe_totals pt
 CROSS JOIN pipe_sec_totals pst
 CROSS JOIN pass_totals pass
 CROSS JOIN pass_sec_totals passs
+CROSS JOIN collab_totals ct
 CROSS JOIN burn_totals burn
 CROSS JOIN current_price cp

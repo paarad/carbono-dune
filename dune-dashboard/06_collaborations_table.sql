@@ -121,11 +121,49 @@ SELECT * FROM (
       AND et.contract_address = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
     GROUP BY CAST(et.evt_block_time AS DATE), ep.eth_price
 
-    -- ============================================================
-    -- TODO: ADD NEW COLLABORATIONS HERE (user to provide details)
-    -- UNION ALL
-    -- SELECT DATE 'YYYY-MM-DD', 'Collaboration Name', 'url', revenue_eth
-    -- ============================================================
+    UNION ALL
+    -- Geometric Fluidity
+    SELECT MIN(CAST(bc.block_time AS DATE)), 'Geometric Fluidity', '',
+        SUM(CASE WHEN bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+            THEN bc.royalty_fee_amount ELSE 0 END)
+    FROM nft.trades bc
+    WHERE bc.nft_contract_address = 0x16e9cfda70c72ef12c6a96ba4261bea3d2865044
+
+    UNION ALL
+    -- Algorithmic Evolution
+    SELECT MIN(CAST(bc.block_time AS DATE)), 'Algorithmic Evolution', '',
+        SUM(CASE WHEN bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+            THEN bc.royalty_fee_amount ELSE 0 END)
+    FROM nft.trades bc
+    WHERE bc.nft_contract_address = 0x5d6a7196d14408278d40ffdfe4cb697a6799ca88
+
+    UNION ALL
+    -- Genesis: #000-051 Special Editions
+    SELECT MIN(CAST(bc.block_time AS DATE)), 'Genesis: #000-051 Special Editions', '',
+        SUM(CASE WHEN bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+            THEN bc.royalty_fee_amount ELSE 0 END)
+    FROM nft.trades bc
+    WHERE bc.nft_contract_address = 0x4a075606591369c41d7e90d13a1e094b3058683e
+
+    UNION ALL
+    -- Pepe's Multidimensional Leap
+    SELECT MIN(CAST(bc.block_time AS DATE)), 'Pepes Multidimensional Leap', '',
+        SUM(CASE WHEN bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+            THEN bc.royalty_fee_amount ELSE 0 END)
+    FROM nft.trades bc
+    WHERE bc.nft_contract_address = 0xe70659b717112ac4e14284d0db2f5d5703df8e43
+      AND bc.token_id = 306
+
+    UNION ALL
+    -- Alchemist's Playroom (1155) — 50 tokens in Grails V (Artist: Botto)
+    SELECT MIN(CAST(bc.block_time AS DATE)), 'Alchemists Playroom (1155)', '',
+        SUM(CASE WHEN bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+            THEN bc.royalty_fee_amount ELSE 0 END)
+    FROM nft.trades bc
+    WHERE bc.nft_contract_address = 0x92a50fe6ede411bd26e171b97472e24d245349b8
+      AND bc.token_id IN (3,21,49,61,76,78,83,93,216,238,255,258,266,269,273,278,279,286,293,
+          304,314,327,328,334,343,351,360,373,376,379,385,390,393,394,395,397,
+          400,401,404,407,409,411,412,413,416,417,418,419,420,421)
 
 ) collabs
 ORDER BY mint_date ASC

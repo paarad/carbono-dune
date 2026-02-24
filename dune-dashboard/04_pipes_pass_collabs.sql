@@ -105,6 +105,41 @@ WITH dates AS (
       AND cast(bc.token_id as varchar) = '3'
       AND bc.tx_from = 0xfcbe1f6ec1c26c8f48bd835d650a3383ea1797c2
     GROUP BY p.week_end
+    UNION ALL
+    -- Geometric Fluidity, Algorithmic Evolution, Genesis Special Editions
+    SELECT p.week_end, SUM(bc.royalty_fee_amount), cast(SUM(bc.number_of_items) as integer)
+    FROM nft.trades bc
+    JOIN prices p ON bc.block_time >= p.week_start AND bc.block_time < p.week_end
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address IN (
+          0x16e9cfda70c72ef12c6a96ba4261bea3d2865044,
+          0x5d6a7196d14408278d40ffdfe4cb697a6799ca88,
+          0x4a075606591369c41d7e90d13a1e094b3058683e
+      )
+      AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    GROUP BY p.week_end
+    UNION ALL
+    -- Pepe's Multidimensional Leap
+    SELECT p.week_end, SUM(bc.royalty_fee_amount), 1
+    FROM nft.trades bc
+    JOIN prices p ON bc.block_time >= p.week_start AND bc.block_time < p.week_end
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address = 0xe70659b717112ac4e14284d0db2f5d5703df8e43
+      AND bc.token_id = 306
+      AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    GROUP BY p.week_end
+    UNION ALL
+    -- Alchemist's Playroom (1155) — 50 tokens in Grails V (Artist: Botto)
+    SELECT p.week_end, SUM(bc.royalty_fee_amount), cast(SUM(bc.number_of_items) as integer)
+    FROM nft.trades bc
+    JOIN prices p ON bc.block_time >= p.week_start AND bc.block_time < p.week_end
+    WHERE bc.block_time >= (SELECT start_date FROM dates) AND bc.block_time < (SELECT end_date FROM dates)
+      AND bc.nft_contract_address = 0x92a50fe6ede411bd26e171b97472e24d245349b8
+      AND bc.token_id IN (3,21,49,61,76,78,83,93,216,238,255,258,266,269,273,278,279,286,293,
+          304,314,327,328,334,343,351,360,373,376,379,385,390,393,394,395,397,
+          400,401,404,407,409,411,412,413,416,417,418,419,420,421)
+      AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    GROUP BY p.week_end
 )
 
 -- Output in long format for chart grouping
