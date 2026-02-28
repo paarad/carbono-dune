@@ -18,14 +18,12 @@ WITH dates AS (
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
         , MIN(botto.price) as botto_price
-        , MIN(eth.price) / MIN(botto.price) as eth_to_botto
+        , MAX(eth.price) / MIN(botto.price) as eth_to_botto
     FROM prices.usd eth
     JOIN prices.usd botto
         ON botto.minute = eth.minute
     WHERE   botto.contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
-        AND botto.blockchain = 'ethereum'
         AND eth.contract_address = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-        AND eth.blockchain = 'ethereum'
         AND botto.minute >= (SELECT start_date + INTERVAL '7' DAY FROM dates)
         AND botto.minute <= (SELECT end_date FROM dates)
         AND day_of_week(botto.minute) = 2

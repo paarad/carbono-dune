@@ -10,10 +10,9 @@
 WITH eth_prices AS (
     SELECT
         date_trunc('week', p.minute - INTERVAL '1' day) + INTERVAL '1' day as week,
-        AVG(p.price) as eth_price
+        MAX(p.price) as eth_price
     FROM prices.usd p
     WHERE p.contract_address = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-    AND p.blockchain = 'ethereum'
     AND p.minute BETWEEN DATE '2021-10-19' AND current_timestamp
     GROUP BY date_trunc('week', p.minute - INTERVAL '1' day) + INTERVAL '1' day
 )
