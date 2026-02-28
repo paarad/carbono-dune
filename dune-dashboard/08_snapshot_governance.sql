@@ -14,18 +14,10 @@ WITH proposals AS (
         , from_unixtime(start) as start_time
         , from_unixtime("end") as end_time
         , scores_total as total_voting_power
-        , element_at(scores, 1) as for_power
-    FROM snapshot.proposals
+        , try_cast(json_extract_scalar(scores, '$[0]') as double) as for_power
+        , votes as voter_count
+    FROM dune.shot.dataset_proposals_view
     WHERE space = 'botto.eth'
-)
-
-, vote_counts AS (
-    SELECT
-          v.proposal_id
-        , COUNT(DISTINCT v.voter) as voter_count
-    FROM snapshot.votes v
-    JOIN proposals p ON p.proposal_id = v.proposal_id
-    GROUP BY v.proposal_id
 )
 
 , proposal_detail AS (
@@ -34,7 +26,7 @@ WITH proposals AS (
         , p.title
         , CAST(p.start_time AS DATE) as proposal_date
         , DATE_TRUNC('month', p.start_time) as proposal_month
-        , COALESCE(vc.voter_count, 0) as voter_count
+        , COALESCE(p.voter_count, 0) as voter_count
         , ROUND(p.total_voting_power, 2) as total_voting_power
         , ROUND(COALESCE(p.for_power, 0), 2) as for_power
         , CASE
@@ -50,7 +42,6 @@ WITH proposals AS (
             ELSE 'Failed'
           END as result
     FROM proposals p
-    LEFT JOIN vote_counts vc ON vc.proposal_id = p.proposal_id
 )
 
 SELECT

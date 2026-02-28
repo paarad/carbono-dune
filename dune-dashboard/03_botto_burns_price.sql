@@ -17,8 +17,8 @@ WITH dates AS (
     SELECT
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
-        , botto.price as botto_price
-        , eth.price / botto.price as eth_to_botto
+        , MIN(botto.price) as botto_price
+        , MIN(eth.price) / MIN(botto.price) as eth_to_botto
     FROM prices.usd eth
     JOIN prices.usd botto
         ON botto.minute = eth.minute
@@ -29,6 +29,7 @@ WITH dates AS (
         AND day_of_week(botto.minute) = 2
         AND hour(botto.minute) = 22
         AND minute(botto.minute) = 0
+    GROUP BY 1, 2
 )
 
 , botto_burns AS (

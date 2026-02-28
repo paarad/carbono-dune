@@ -36,7 +36,7 @@
 
 | Viz # | Type | Title | Settings |
 |-------|------|-------|----------|
-| 1 | **Bar Chart** | Non-Art Revenue by Source | X: `week_end` · Y: `revenue` · Group by: `source` · Stacking: **grouped** (side by side) |
+| 1 | **Bar Chart** | Pipes, Pass & Collabs Revenue | X: `week_end` · Y: `revenue` · Group by: `source` · Stacking: **grouped** (side by side) |
 
 ---
 
@@ -52,10 +52,10 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 | 3 | **Counter** | Primary Revenue | `total_primary_revenue` | Suffix: `ETH` |
 | 4 | **Counter** | Secondary Revenue | `total_secondary_revenue` | Suffix: `ETH` |
 | 5 | **Counter** | 1/1 Artworks Sold | `artworks_sold` | |
-| 6 | **Counter** | Pipe Revenue | `total_pipe_revenue` | Suffix: `ETH` |
-| 7 | **Counter** | Pass Revenue | `total_pass_revenue` | Suffix: `ETH` |
-| 8 | **Counter** | BOTTO Burned | `total_botto_burnt` | Suffix: `BOTTO` |
+| 6 | **Counter** | BOTTO Burned | `total_botto_burnt` | Suffix: `BOTTO` |
 | 9 | **Counter** | BOTTO Price | `current_botto_price` | Prefix: `$` |
+| 10 | **Counter** | Rewards Distributed | `total_rewards_distributed` | Suffix: `ETH` |
+| 11 | **Counter** | Total Staked | `total_staked` | Suffix: `BOTTO` |
 
 ---
 
@@ -73,7 +73,7 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 
 | Viz # | Type | Title | Settings |
 |-------|------|-------|----------|
-| 1 | **Table** | Collection Counts | Columns: `Collection`, `Type`, `Count` · Sort: `Type` desc, then `Collection` asc |
+| 1 | **Table** | Collection Counts | Columns: `Collection`, `Type`, `Count` · No sort needed (query returns in correct order) |
 
 ---
 
@@ -93,7 +93,7 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 
 | Viz # | Type | Title | Settings |
 |-------|------|-------|----------|
-| 1 | **Area Chart** | BOTTO Token Supply Breakdown | X: `week_end` · Y: `burned`, `gov_staking`, `uni_v2_lp`, `uni_v3_lp`, `rewards_wallet`, `liquidity_mining`, `circulating` · Stacking: **stacked** · Order bottom→top: `circulating` first (largest) |
+| 1 | **Area Chart** | BOTTO Token Supply Breakdown | X: `week_end` · Y: `burned`, `gov_staking`, `treasury`, `team`, `airdrop`, `uni_v2_lp`, `uni_v3_lp`, `rewards_wallet`, `liquidity_mining`, `circulating` · Stacking: **stacked** · Order bottom→top: `circulating` first (largest) |
 
 ---
 
@@ -156,43 +156,49 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 ## Suggested Dashboard Layout
 
 ```
-Row 1:  [Counter] [Counter] [Counter] [Counter] [Counter]  ← Query 05 KPIs
-        Total Rev  Art Rev   Artworks  BOTTO Price  BOTTO Burned
+── REVENUE OVERVIEW ──────────────────────────────────────────
 
-Row 2:  [Counter] [Counter] [Counter] [Counter]
-        Primary   Secondary  Pipe Rev  Pass Rev
+Row 1:  [Counter]       [Counter]        [Counter]
+        Total Revenue   Artworks 1/1     Rewards Distributed
 
-Row 3:  [============= Weekly Art Revenue by Period (Q01) ==============]
+Row 2:  [============= Weekly Art Revenue by Period (Q01) ==============]
 
-Row 4:  [=============== Cumulative Revenue (Q02 viz 2) ================]
+Row 3:  [Weekly Revenue by Source (Q02 viz 1)] [Revenue Allocation (Q02 viz 3)]
 
-Row 5:  [Weekly Revenue by Source (Q02 viz 1)] [Revenue Allocation (Q02 viz 3)]
+Row 4:  [Pipes/Pass/Collabs Revenue (Q04)]     [Burns & Price (Q03 viz 1)]
 
-Row 6:  [Non-Art Revenue (Q04)]                [Burns & Price (Q03 viz 1)]
+Row 5:  [Revenue by Period (Q14 viz 2)]        [Period Performance Table (Q14 viz 1)]
+
+── TOKEN & ECONOMICS ─────────────────────────────────────────
+
+Row 6:  [Counter]       [Counter]        [Counter]
+        BOTTO Price     BOTTO Burned     Total Staked
 
 Row 7:  [============ BOTTO Token Supply Breakdown (Q09) ===============]
 
-Row 8:  [Treasury ETH Balance (Q10 viz 1)]     [Treasury USD (Q10 viz 3)]
+Row 8:  [Total BOTTO Staked (Q11 viz 1)]       [Staking Activity (Q11 viz 2)]
 
-Row 9:  [Treasury ETH Flows (Q10 viz 2)]       [Treasury BOTTO (Q10 viz 4)]
+Row 9:  [Staker Counts (Q11 viz 3)]            [Weekly BOTTO Burned (Q03 viz 2)]
 
-Row 10: [Total BOTTO Staked (Q11 viz 1)]       [Staking Activity (Q11 viz 2)]
+Row 10: [DEX Volume by Chain (Q13 viz 1)]      [Cumulative DEX Volume (Q13 viz 2)]
 
-Row 11: [Staker Counts (Q11 viz 3)]            [Weekly ETH Distributed (Q12 viz 1)]
+── TREASURY & REWARDS ────────────────────────────────────────
 
-Row 12: [Cumulative ETH Distributed (Q12 viz 2)] [Weekly Claimers (Q12 viz 3)]
+Row 11: [Treasury ETH Balance (Q10 viz 1)]     [Treasury USD (Q10 viz 3)]
 
-Row 13: [DEX Volume by Chain (Q13 viz 1)]      [Cumulative DEX Volume (Q13 viz 2)]
+Row 12: [Treasury ETH Flows (Q10 viz 2)]       [Treasury BOTTO (Q10 viz 4)]
 
-Row 14: [Weekly Trade Count (Q13 viz 3)]        [Cumulative USD Distrib (Q12 viz 4)]
+Row 13: [Weekly ETH Distributed (Q12 viz 1)]   [Cumulative ETH Distributed (Q12 viz 2)]
+
+Row 14: [Weekly Claimers (Q12 viz 3)]          [Cumulative USD Distrib (Q12 viz 4)]
+
+── GOVERNANCE ────────────────────────────────────────────────
 
 Row 15: [Governance Proposals Table (Q08 viz 1)                        ]
 
 Row 16: [Monthly Gov Activity (Q08 viz 2)]     [Avg Voters/Month (Q08 viz 3)]
 
-Row 17: [Period Performance Table (Q14 viz 1)                          ]
+── COLLECTIONS ───────────────────────────────────────────────
 
-Row 18: [Revenue by Period (Q14 viz 2)                                 ]
-
-Row 19: [Collaborations Table (Q06)            ] [Collection Counts (Q07)]
+Row 17: [Collaborations Table (Q06)            ] [Collection Counts (Q07)]
 ```

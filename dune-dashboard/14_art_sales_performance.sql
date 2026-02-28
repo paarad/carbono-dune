@@ -13,7 +13,7 @@ WITH dates AS (
 )
 
 , prices AS (
-    SELECT
+    SELECT DISTINCT
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
     FROM prices.usd eth
@@ -28,7 +28,7 @@ WITH dates AS (
         AND minute(botto.minute) = 0
 )
 
-, superrare_sales AS (
+, superrare_sales_raw AS (
     SELECT evt_block_time as block_time, cast(_amount as double) / 1e18 as amount_original,
            _seller as seller, _originContract as nft_contract_address, _tokenId as token_id
     FROM superrare_ethereum.SuperRareBazaar_evt_Sold
@@ -47,6 +47,21 @@ WITH dates AS (
     UNION ALL
     SELECT evt_block_time, cast(_amount as double) / 1e18, _seller, _contractAddress, _tokenId
     FROM superrare_ethereum.SuperRareAuctionHouse_evt_AuctionSettled
+)
+
+-- Dedup only Botto wallet sales (1 primary per token), keep all secondary sales
+, superrare_sales AS (
+    SELECT block_time, amount_original, seller, nft_contract_address, token_id
+    FROM (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY nft_contract_address, token_id, seller ORDER BY block_time ASC) as rn
+        FROM superrare_sales_raw
+        WHERE seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+    ) t
+    WHERE rn = 1
+    UNION ALL
+    SELECT block_time, amount_original, seller, nft_contract_address, token_id
+    FROM superrare_sales_raw
+    WHERE seller NOT IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
 )
 
 , all_art_sales AS (

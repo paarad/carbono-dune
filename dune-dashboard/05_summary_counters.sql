@@ -15,7 +15,7 @@ WITH dates AS (
     SELECT
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
-        , botto.price as botto_price
+        , MIN(botto.price) as botto_price
     FROM prices.usd eth
     JOIN prices.usd botto
         ON botto.minute = eth.minute
@@ -26,9 +26,10 @@ WITH dates AS (
         AND day_of_week(botto.minute) = 2
         AND hour(botto.minute) = 22
         AND minute(botto.minute) = 0
+    GROUP BY 1, 2
 )
 
-, superrare_sales AS (
+, superrare_sales_raw AS (
     SELECT evt_block_time as block_time, cast(_amount as double) / 1e18 as amount_original,
            _seller as seller, _originContract as nft_contract_address, _tokenId as token_id
     FROM superrare_ethereum.SuperRareBazaar_evt_Sold
@@ -47,6 +48,21 @@ WITH dates AS (
     UNION ALL
     SELECT evt_block_time, cast(_amount as double) / 1e18, _seller, _contractAddress, _tokenId
     FROM superrare_ethereum.SuperRareAuctionHouse_evt_AuctionSettled
+)
+
+-- Dedup only Botto wallet sales (1 primary per token), keep all secondary sales
+, superrare_sales AS (
+    SELECT block_time, amount_original, seller, nft_contract_address, token_id
+    FROM (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY nft_contract_address, token_id, seller ORDER BY block_time ASC) as rn
+        FROM superrare_sales_raw
+        WHERE seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+    ) t
+    WHERE rn = 1
+    UNION ALL
+    SELECT block_time, amount_original, seller, nft_contract_address, token_id
+    FROM superrare_sales_raw
+    WHERE seller NOT IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
 )
 
 , all_art_sales AS (
@@ -240,6 +256,28 @@ WITH dates AS (
       AND "to" = 0x000000000000000000000000000000000000dead
 )
 
+, rewards_totals AS (
+    SELECT ROUND(SUM(tr.value / 1e18), 4) as total_eth_distributed
+    FROM ethereum.traces tr
+    WHERE tr."from" = 0x93298241417a63469b6f8f080b4878749acb4c47
+      AND tr.block_time >= (SELECT start_date FROM dates)
+      AND tr.block_time < (SELECT end_date FROM dates)
+      AND tr.success = true
+      AND tr.type NOT IN ('delegatecall', 'staticcall')
+      AND tr.value > 0
+)
+
+, staking_totals AS (
+    SELECT ROUND(
+        SUM(CASE WHEN t."to" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6 THEN CAST(t.value AS DOUBLE) / 1e18 ELSE 0 END)
+      - SUM(CASE WHEN t."from" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6 THEN CAST(t.value AS DOUBLE) / 1e18 ELSE 0 END)
+    , 4) as total_staked
+    FROM erc20_ethereum.evt_Transfer t
+    WHERE t.contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
+      AND (t."to" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6
+           OR t."from" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6)
+)
+
 , current_price AS (
     SELECT botto_price FROM prices ORDER BY week_end DESC LIMIT 1
 )
@@ -269,6 +307,9 @@ SELECT
     , COALESCE(pst.pipe_secondary, 0) as pipe_secondary_revenue
     , COALESCE(pass.pass_primary, 0) as pass_primary_revenue
     , COALESCE(passs.pass_secondary, 0) as pass_secondary_revenue
+    -- Rewards distributed to stakers
+    , COALESCE(rw.total_eth_distributed, 0) as total_rewards_distributed
+    , COALESCE(st.total_staked, 0) as total_staked
 FROM art_totals art
 CROSS JOIN pipe_totals pt
 CROSS JOIN pipe_sec_totals pst
@@ -277,3 +318,5 @@ CROSS JOIN pass_sec_totals passs
 CROSS JOIN collab_totals ct
 CROSS JOIN burn_totals burn
 CROSS JOIN current_price cp
+CROSS JOIN rewards_totals rw
+CROSS JOIN staking_totals st

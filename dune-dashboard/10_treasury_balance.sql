@@ -18,7 +18,7 @@ WITH dates AS (
     SELECT
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
-        , eth.price as eth_price
+        , MIN(eth.price) as eth_price
     FROM prices.usd eth
     JOIN prices.usd botto
         ON botto.minute = eth.minute
@@ -29,6 +29,7 @@ WITH dates AS (
         AND day_of_week(botto.minute) = 2
         AND hour(botto.minute) = 22
         AND minute(botto.minute) = 0
+    GROUP BY 1, 2
 )
 
 -- ETH flows via traces

@@ -15,7 +15,7 @@ WITH dates AS (
 )
 
 , prices AS (
-    SELECT
+    SELECT DISTINCT
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
     FROM prices.usd eth

@@ -1,5 +1,5 @@
 -- ============================================================
--- BOTTO DASHBOARD: Non-Art Revenue (Pipes, Access Pass, Collabs)
+-- BOTTO DASHBOARD: Pipes, Access Pass & Collaborations Revenue
 -- ============================================================
 -- Chart: Grouped bar chart
 -- X-axis: week_end | Y-axis: revenue | Color: source
@@ -12,7 +12,7 @@ WITH dates AS (
 )
 
 , prices AS (
-    SELECT
+    SELECT DISTINCT
           date_trunc('hour', eth.minute) as week_end
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
     FROM prices.usd eth

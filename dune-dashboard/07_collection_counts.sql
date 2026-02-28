@@ -189,10 +189,24 @@ WITH dates AS (
     SELECT 'Alchemists Playroom (1155)', 50, 'Collaboration'
 )
 
-SELECT period as Collection, type as Type, quantity as Count 
-FROM botto_1_of_1s
-UNION ALL
-SELECT period, type, quantity FROM pipes_pass
-UNION ALL
-SELECT period, type, quantity FROM collaborations
-ORDER BY Type DESC, Collection ASC
+SELECT Collection, Type, Count
+FROM (
+    SELECT period as Collection, type as Type, quantity as Count, 1 as sort_order FROM botto_1_of_1s WHERE period = 'Genesis'
+    UNION ALL SELECT period, type, quantity, 2 FROM botto_1_of_1s WHERE period = 'Fragmentation'
+    UNION ALL SELECT period, type, quantity, 3 FROM botto_1_of_1s WHERE period = 'Paradox'
+    UNION ALL SELECT period, type, quantity, 4 FROM botto_1_of_1s WHERE period = 'Rebellion'
+    UNION ALL SELECT period, type, quantity, 5 FROM botto_1_of_1s WHERE period = 'Absurdism'
+    UNION ALL SELECT period, type, quantity, 6 FROM botto_1_of_1s WHERE period = 'Interstice'
+    UNION ALL SELECT period, type, quantity, 7 FROM botto_1_of_1s WHERE period = 'Temporal Echoes'
+    UNION ALL SELECT period, type, quantity, 8 FROM botto_1_of_1s WHERE period = 'Morphogenesis'
+    UNION ALL SELECT period, type, quantity, 9 FROM botto_1_of_1s WHERE period = 'Synthetic Histories'
+    UNION ALL SELECT period, type, quantity, 10 FROM botto_1_of_1s WHERE period = 'Cosmic Garden'
+    UNION ALL SELECT period, type, quantity, 11 FROM botto_1_of_1s WHERE period = 'Liminal Thresholds'
+    UNION ALL SELECT period, type, quantity, 12 FROM botto_1_of_1s WHERE period = 'Semantic Drift'
+    UNION ALL SELECT period, type, quantity, 13 FROM botto_1_of_1s WHERE period = 'Attention Economy'
+    UNION ALL SELECT period, type, quantity, 14 FROM botto_1_of_1s WHERE period = 'Collapse Aesthetics'
+    UNION ALL SELECT period, type, quantity, 15 FROM pipes_pass WHERE period = 'Botto Pipes'
+    UNION ALL SELECT period, type, quantity, 16 FROM pipes_pass WHERE period = 'Access Pass'
+    UNION ALL SELECT period, type, quantity, 17 FROM collaborations
+) t
+ORDER BY sort_order ASC
