@@ -64,18 +64,99 @@ WITH dates AS (
     WHERE seller NOT IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
 )
 
+-- SuperRare BatchOfferCreator sales (not captured by nft.trades)
+-- Get sale metadata from event, ETH amount from transaction value
+, batch_offer_events AS (
+    SELECT
+        l.block_time,
+        l.block_number,
+        l.tx_hash,
+        bytearray_substring(l.topic1, 13, 20) as seller,
+        bytearray_substring(l.topic3, 13, 20) as nft_contract_address,
+        bytearray_to_uint256(bytearray_substring(l.data, 1, 32)) as token_id
+    FROM ethereum.logs l
+    WHERE l.topic0 = 0x25d87e12d2953b43b0140bdfc8a4fa389293a8d350e9becd3e21d6646620fa72
+      AND bytearray_substring(l.topic3, 13, 20) IN (
+          0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0,  -- Genesis (SuperRare shared)
+          0xa4dc93da01458d38f691db5c98e9157891febe86,  -- Fragmentation
+          0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e   -- Paradox
+      )
+)
+, batch_offer_sales AS (
+    SELECT
+        b.block_time,
+        CAST(tx.value AS double) / 1e18 as amount_original,
+        b.seller,
+        b.nft_contract_address,
+        b.token_id
+    FROM batch_offer_events b
+    JOIN ethereum.transactions tx
+        ON tx.hash = b.tx_hash
+        AND tx.block_number = b.block_number
+)
+
 , all_art_sales AS (
-    -- ===== SUPERRARE PERIODS =====
+    -- ===== NFT.TRADES (all marketplaces) =====
 
     -- Genesis
     SELECT block_time, amount_original as sales,
         CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
              THEN amount_original * 0.85 ELSE amount_original / 10 END as revenue,
-        1 as quantity,
+        cast(number_of_items as integer) as quantity,
         CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
              THEN 'primary' ELSE 'secondary' END as sale_type,
         'Genesis' as period
-    FROM superrare_sales
+    FROM nft.trades
+    WHERE nft_contract_address = 0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0
+      AND cast(token_id as varchar) IN (
+          '29715','29922','30114','30298','30443','30639','30887','31057','31200','31352','31447',
+          '31546','31704','31887','32068','32242','32457','32619','32737','33018','33163','33332',
+          '33501','33637','33754','33879','34066','34231','34399','34540','34684','34910','35069',
+          '35208','35353','35482','35616','35769','35934','36127','36315','36525','36702','36905',
+          '37149','37380','37657','37877','38050','38335','38615','38913')
+      AND block_time >= (SELECT start_date FROM dates) AND block_time < (SELECT end_date FROM dates)
+      AND tx_hash NOT IN (SELECT tx_hash FROM batch_offer_events)
+
+    UNION ALL
+    -- Fragmentation
+    SELECT block_time, amount_original,
+        CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+             THEN amount_original * 0.85 ELSE amount_original / 10 END,
+        cast(number_of_items as integer),
+        CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+             THEN 'primary' ELSE 'secondary' END,
+        'Fragmentation'
+    FROM nft.trades
+    WHERE nft_contract_address = 0xa4dc93da01458d38f691db5c98e9157891febe86
+      AND block_time >= (SELECT start_date FROM dates) AND block_time < (SELECT end_date FROM dates)
+      AND tx_hash NOT IN (SELECT tx_hash FROM batch_offer_events)
+
+    UNION ALL
+    -- Paradox
+    SELECT block_time, amount_original,
+        CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+             THEN amount_original * 0.85 ELSE amount_original / 10 END,
+        cast(number_of_items as integer),
+        CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+             THEN 'primary' ELSE 'secondary' END,
+        'Paradox'
+    FROM nft.trades
+    WHERE nft_contract_address = 0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e
+      AND block_time >= (SELECT start_date FROM dates) AND block_time < (SELECT end_date FROM dates)
+      AND tx_hash NOT IN (SELECT tx_hash FROM batch_offer_events)
+
+    UNION ALL
+    -- ===== BATCH OFFER SALES (SuperRare BatchOfferCreator) =====
+
+    -- Genesis (batch offers)
+    SELECT block_time, amount_original,
+        CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+             THEN amount_original * 0.85 ELSE amount_original / 10 END,
+        1,
+        CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
+             THEN 'primary' ELSE 'secondary' END,
+        'Genesis'
+    FROM batch_offer_sales
     WHERE nft_contract_address = 0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0
       AND cast(token_id as varchar) IN (
           '29715','29922','30114','30298','30443','30639','30887','31057','31200','31352','31447',
@@ -86,7 +167,7 @@ WITH dates AS (
       AND block_time >= (SELECT start_date FROM dates) AND block_time < (SELECT end_date FROM dates)
 
     UNION ALL
-    -- Fragmentation
+    -- Fragmentation (batch offers)
     SELECT block_time, amount_original,
         CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
              THEN amount_original * 0.85 ELSE amount_original / 10 END,
@@ -94,12 +175,12 @@ WITH dates AS (
         CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
              THEN 'primary' ELSE 'secondary' END,
         'Fragmentation'
-    FROM superrare_sales
+    FROM batch_offer_sales
     WHERE nft_contract_address = 0xa4dc93da01458d38f691db5c98e9157891febe86
       AND block_time >= (SELECT start_date FROM dates) AND block_time < (SELECT end_date FROM dates)
 
     UNION ALL
-    -- Paradox
+    -- Paradox (batch offers)
     SELECT block_time, amount_original,
         CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
              THEN amount_original * 0.85 ELSE amount_original / 10 END,
@@ -107,7 +188,7 @@ WITH dates AS (
         CASE WHEN seller IN (0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c, 0x8c9f364bf7a56ed058fc63ef81c6cf09c833e656)
              THEN 'primary' ELSE 'secondary' END,
         'Paradox'
-    FROM superrare_sales
+    FROM batch_offer_sales
     WHERE nft_contract_address = 0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e
       AND block_time >= (SELECT start_date FROM dates) AND block_time < (SELECT end_date FROM dates)
 

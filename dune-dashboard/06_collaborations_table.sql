@@ -61,12 +61,11 @@ SELECT * FROM (
 
     UNION ALL
     -- The Memes, Card 118 | 6529
+    -- NFT contract: 0x33FD426905F149f8376e227d0C9D3340AaD17aF1
+    -- TODO: Revenue from direct ETH transfers — need specific txs
     SELECT DATE '2023-06-20', 'The Memes, Card 118 | 6529',
         'https://seize.io/the-memes/118',
-        (SELECT SUM(value / 1e+18)
-         FROM transfers_ethereum.eth
-         WHERE "from" = 0x3A3548e060Be10c2614d0a4Cb0c03CC9093fD799
-         AND "to" = 0x35bb964878d7B6ddFA69cF0b97EE63fa3C9d9b49)
+        cast(NULL as double)
 
     UNION ALL
     -- Invisible Alchemy: Communion of Harvested Worlds

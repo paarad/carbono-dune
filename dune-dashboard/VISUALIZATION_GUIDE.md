@@ -52,6 +52,7 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 | 3 | **Counter** | Primary Revenue | `total_primary_revenue` | Suffix: `ETH` |
 | 4 | **Counter** | Secondary Revenue | `total_secondary_revenue` | Suffix: `ETH` |
 | 5 | **Counter** | 1/1 Artworks Sold | `artworks_sold` | |
+| 6 | **Counter** | 1/1 Art Volume | `total_art_volume` | Suffix: `ETH` |
 | 6 | **Counter** | BOTTO Burned | `total_botto_burnt` | Suffix: `BOTTO` |
 | 9 | **Counter** | BOTTO Price | `current_botto_price` | Prefix: `$` |
 | 10 | **Counter** | Rewards Distributed | `total_rewards_distributed` | Suffix: `ETH` |
@@ -102,9 +103,9 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 
 | Viz # | Type | Title | Settings |
 |-------|------|-------|----------|
-| 1 | **Area Chart** | Treasury ETH Balance | X: `week_end` · Y: `eth_balance` |
+| 1 | **Stacked Area** | Treasury ETH Holdings | X: `week_end` · Y: `eth_balance`, `steth_balance` · Stacking: **stacked** · Labels: "Native ETH" / "stETH (Lido)" |
 | 2 | **Bar Chart** | Treasury ETH Flows | X: `week_end` · Y: `eth_inflow` (green), `eth_outflow` (red) · Stacking: **grouped** |
-| 3 | **Line Chart** | Treasury Balance (USD) | X: `week_end` · Y: `eth_balance_usd` |
+| 3 | **Line Chart** | Treasury Value (USD) | X: `week_end` · Y: `total_eth_usd` |
 | 4 | **Line Chart** | Treasury BOTTO Balance | X: `week_end` · Y: `botto_balance` |
 
 ---
@@ -116,7 +117,7 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 |-------|------|-------|----------|
 | 1 | **Area Chart** | Total BOTTO Staked | X: `week_end` · Y: `total_staked` |
 | 2 | **Bar Chart** | Weekly Staking Activity | X: `week_end` · Y: `weekly_staked` (green), `weekly_unstaked` (red) · Stacking: **grouped** |
-| 3 | **Line Chart** | Staker Counts | X: `week_end` · Y: `unique_stakers`, `new_stakers` |
+| 3 | **Line Chart** | Staker Counts | X: `week_end` · Y: `active_stakers`, `new_stakers` |
 
 ---
 
@@ -125,10 +126,11 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 
 | Viz # | Type | Title | Settings |
 |-------|------|-------|----------|
-| 1 | **Bar Chart** | Weekly ETH Distributed | X: `week_end` · Y: `weekly_eth_distributed` |
-| 2 | **Area Chart** | Cumulative ETH Distributed | X: `week_end` · Y: `cumulative_eth_distributed` |
+| 1 | **Bar Chart** | Weekly Rewards (USD) | X: `week_end` · Y: `weekly_eth_rewards_usd`, `weekly_botto_rewards_usd` · Stacking: **stacked** · Labels: "ETH Rewards" / "BOTTO Rewards" |
+| 2 | **Area Chart** | Cumulative Rewards (USD) | X: `week_end` · Y: `cumulative_rewards_usd` |
 | 3 | **Line Chart** | Weekly Claimers | X: `week_end` · Y: `unique_claimers` |
-| 4 | **Line Chart** | Cumulative USD Distributed | X: `week_end` · Y: `cumulative_usd_distributed` |
+| 4 | **Bar Chart** | Weekly BOTTO Distributed | X: `week_end` · Y: `weekly_botto_distributed` |
+| 5 | **Bar Chart** | Active Rewards: ETH Swapped | X: `week_end` · Y: `weekly_active_eth_swapped` · Label: "ETH swapped to BOTTO for active rewards" |
 
 ---
 

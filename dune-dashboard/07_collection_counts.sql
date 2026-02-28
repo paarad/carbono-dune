@@ -33,26 +33,55 @@ WITH dates AS (
     FROM superrare_ethereum.SuperRareAuctionHouse_evt_AuctionSettled
 )
 
+-- SuperRare BatchOfferCreator sales (not captured by nft.trades)
+, batch_offer_sales AS (
+    SELECT
+        l.block_time,
+        bytearray_substring(l.topic1, 13, 20) as seller,
+        bytearray_substring(l.topic3, 13, 20) as nft_contract_address,
+        bytearray_to_uint256(bytearray_substring(l.data, 1, 32)) as token_id
+    FROM ethereum.logs l
+    WHERE l.topic0 = 0x25d87e12d2953b43b0140bdfc8a4fa389293a8d350e9becd3e21d6646620fa72
+      AND bytearray_substring(l.topic3, 13, 20) IN (
+          0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0,
+          0xa4dc93da01458d38f691db5c98e9157891febe86,
+          0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e
+      )
+)
+
 , botto_1_of_1s AS (
     SELECT period, quantity, 'Botto 1/1' as type
     FROM (
         SELECT 'Genesis' as period, COUNT(DISTINCT token_id) as quantity
-        FROM superrare_sales
-        WHERE nft_contract_address = 0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0
-          AND cast(token_id as varchar) IN (
-              '29715','29922','30114','30298','30443','30639','30887','31057','31200','31352','31447',
-              '31546','31704','31887','32068','32242','32457','32619','32737','33018','33163','33332',
-              '33501','33637','33754','33879','34066','34231','34399','34540','34684','34910','35069',
-              '35208','35353','35482','35616','35769','35934','36127','36315','36525','36702','36905',
-              '37149','37380','37657','37877','38050','38335','38615','38913')
-        
+        FROM (
+            SELECT token_id FROM nft.trades
+            WHERE nft_contract_address = 0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0
+              AND cast(token_id as varchar) IN (
+                  '29715','29922','30114','30298','30443','30639','30887','31057','31200','31352','31447',
+                  '31546','31704','31887','32068','32242','32457','32619','32737','33018','33163','33332',
+                  '33501','33637','33754','33879','34066','34231','34399','34540','34684','34910','35069',
+                  '35208','35353','35482','35616','35769','35934','36127','36315','36525','36702','36905',
+                  '37149','37380','37657','37877','38050','38335','38615','38913')
+            UNION ALL
+            SELECT CAST(token_id AS uint256) FROM batch_offer_sales
+            WHERE nft_contract_address = 0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0
+        ) t
+
         UNION ALL
         SELECT 'Fragmentation', COUNT(DISTINCT token_id)
-        FROM superrare_sales WHERE nft_contract_address = 0xa4dc93da01458d38f691db5c98e9157891febe86
+        FROM (
+            SELECT token_id FROM nft.trades WHERE nft_contract_address = 0xa4dc93da01458d38f691db5c98e9157891febe86
+            UNION ALL
+            SELECT CAST(token_id AS uint256) FROM batch_offer_sales WHERE nft_contract_address = 0xa4dc93da01458d38f691db5c98e9157891febe86
+        ) t
 
         UNION ALL
         SELECT 'Paradox', COUNT(DISTINCT token_id)
-        FROM superrare_sales WHERE nft_contract_address = 0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e
+        FROM (
+            SELECT token_id FROM nft.trades WHERE nft_contract_address = 0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e
+            UNION ALL
+            SELECT CAST(token_id AS uint256) FROM batch_offer_sales WHERE nft_contract_address = 0xbdf4f17b7d638d7d3e5dcadf27e812b07b2b5c9e
+        ) t
 
         UNION ALL
         SELECT 'Rebellion', COUNT(DISTINCT token_id)
@@ -139,7 +168,7 @@ WITH dates AS (
     -- Dynamic count from NFT trades
     SELECT 'The Memes, Card 118 | 6529', cast(SUM(number_of_items) as integer), 'Collaboration'
     FROM nft.trades
-    WHERE nft_contract_address = 0x33fd426905f149f8376e227d0c9d3363f27a72bd
+    WHERE nft_contract_address = 0x33FD426905F149f8376e227d0C9D3340AaD17aF1
     AND token_id = 118
 
     UNION ALL

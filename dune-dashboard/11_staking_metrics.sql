@@ -2,9 +2,9 @@
 -- BOTTO DASHBOARD: Staking Metrics
 -- ============================================================
 -- Charts:
---   1. Area: total_staked (cumulative)
+--   1. Area: total_staked (cumulative BOTTO in staking contract)
 --   2. Bar: weekly_staked, weekly_unstaked
---   3. Line: unique_stakers, new_stakers
+--   3. Line: active_stakers (wallets with positive balance), new_stakers
 -- X-axis: week_end
 -- ============================================================
 
@@ -30,59 +30,95 @@ WITH dates AS (
         AND minute(botto.minute) = 0
 )
 
--- Staking transfers (BOTTO sent to gov_staking contract)
-, stake_events AS (
-    SELECT
-          t.evt_block_time as event_time
-        , t."from" as staker
-        , CAST(t.value AS DOUBLE) / 1e18 as amount
+-- All staking events (all time — needed for accurate staker counts)
+, staker_events AS (
+    -- Stakes (positive)
+    SELECT t."from" as staker, t.evt_block_time as event_time,
+           CAST(t.value AS DOUBLE) / 1e18 as amount
     FROM erc20_ethereum.evt_Transfer t
     WHERE t.contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
       AND t."to" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6
-      AND t.evt_block_time >= (SELECT start_date FROM dates)
-      AND t.evt_block_time < (SELECT end_date FROM dates)
-)
 
--- Unstaking transfers (BOTTO sent from gov_staking contract)
-, unstake_events AS (
-    SELECT
-          t.evt_block_time as event_time
-        , t."to" as staker
-        , CAST(t.value AS DOUBLE) / 1e18 as amount
+    UNION ALL
+
+    -- Unstakes (negative)
+    SELECT t."to" as staker, t.evt_block_time,
+           -CAST(t.value AS DOUBLE) / 1e18
     FROM erc20_ethereum.evt_Transfer t
     WHERE t.contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
       AND t."from" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6
-      AND t.evt_block_time >= (SELECT start_date FROM dates)
-      AND t.evt_block_time < (SELECT end_date FROM dates)
 )
 
--- First stake per address for "new stakers" metric
+-- First stake per wallet (all time, for "new stakers")
 , first_stakes AS (
     SELECT staker, MIN(event_time) as first_stake_time
-    FROM stake_events
+    FROM staker_events
+    WHERE amount > 0
     GROUP BY staker
 )
 
+-- Per-wallet balances from before our tracking window
+, initial_staker_balances AS (
+    SELECT staker, SUM(amount) as balance
+    FROM staker_events
+    WHERE event_time < (SELECT start_date FROM dates)
+    GROUP BY staker
+    HAVING SUM(amount) <> 0
+)
+
+-- Per staker per week: net change (in-window events only)
+, staker_weekly_changes AS (
+    SELECT se.staker, p.week_end, SUM(se.amount) as net_change
+    FROM staker_events se
+    JOIN prices p ON se.event_time >= p.week_start AND se.event_time < p.week_end
+    GROUP BY se.staker, p.week_end
+)
+
+-- Merge initial balances (→ first week) with weekly changes
+, staker_weekly AS (
+    SELECT staker, week_end, SUM(net_change) as net_change
+    FROM (
+        SELECT staker, (SELECT MIN(week_end) FROM prices) as week_end, balance as net_change
+        FROM initial_staker_balances
+
+        UNION ALL
+
+        SELECT staker, week_end, net_change
+        FROM staker_weekly_changes
+    ) t
+    GROUP BY staker, week_end
+)
+
+-- Per staker: running balance after each active week
+, staker_running AS (
+    SELECT staker, week_end, net_change,
+           SUM(net_change) OVER (PARTITION BY staker ORDER BY week_end ASC) as running_balance
+    FROM staker_weekly
+)
+
+-- Detect entries (balance 0→positive) and exits (balance positive→0) per week
+, staker_transitions AS (
+    SELECT week_end,
+           SUM(CASE WHEN running_balance > 0
+                     AND (running_balance - net_change) <= 0 THEN 1 ELSE 0 END) as entries,
+           SUM(CASE WHEN running_balance <= 0
+                     AND (running_balance - net_change) > 0 THEN 1 ELSE 0 END) as exits
+    FROM staker_running
+    GROUP BY week_end
+)
+
 -- Weekly staking volumes
-, weekly_stakes AS (
+, weekly_volumes AS (
     SELECT p.week_end,
-        ROUND(SUM(s.amount), 4) as staked_amount,
-        COUNT(DISTINCT s.staker) as staker_count
-    FROM stake_events s
-    JOIN prices p ON s.event_time >= p.week_start AND s.event_time < p.week_end
+           ROUND(SUM(CASE WHEN se.amount > 0 THEN se.amount ELSE 0 END), 4) as weekly_staked,
+           ROUND(SUM(CASE WHEN se.amount < 0 THEN -se.amount ELSE 0 END), 4) as weekly_unstaked
+    FROM staker_events se
+    JOIN prices p ON se.event_time >= p.week_start AND se.event_time < p.week_end
+    WHERE se.event_time >= (SELECT start_date FROM dates)
     GROUP BY p.week_end
 )
 
-, weekly_unstakes AS (
-    SELECT p.week_end,
-        ROUND(SUM(u.amount), 4) as unstaked_amount,
-        COUNT(DISTINCT u.staker) as unstaker_count
-    FROM unstake_events u
-    JOIN prices p ON u.event_time >= p.week_start AND u.event_time < p.week_end
-    GROUP BY p.week_end
-)
-
--- New stakers per week
+-- New stakers per week (first-time stakers only)
 , weekly_new_stakers AS (
     SELECT p.week_end, COUNT(DISTINCT fs.staker) as new_stakers
     FROM first_stakes fs
@@ -90,16 +126,25 @@ WITH dates AS (
     GROUP BY p.week_end
 )
 
+-- Total staked before tracking window (for cumulative chart)
+, initial_total AS (
+    SELECT COALESCE(SUM(balance), 0) as initial_staked
+    FROM initial_staker_balances
+    WHERE balance > 0
+)
+
 SELECT
       p.week_end
-    , COALESCE(ws.staked_amount, 0) as weekly_staked
-    , COALESCE(wu.unstaked_amount, 0) as weekly_unstaked
-    , ROUND(SUM(COALESCE(ws.staked_amount, 0) - COALESCE(wu.unstaked_amount, 0))
-            OVER (ORDER BY p.week_end ASC), 4) as total_staked
-    , COALESCE(ws.staker_count, 0) + COALESCE(wu.unstaker_count, 0) as unique_stakers
+    , COALESCE(wv.weekly_staked, 0) as weekly_staked
+    , COALESCE(wv.weekly_unstaked, 0) as weekly_unstaked
+    , ROUND((SELECT initial_staked FROM initial_total)
+        + SUM(COALESCE(wv.weekly_staked, 0) - COALESCE(wv.weekly_unstaked, 0))
+              OVER (ORDER BY p.week_end ASC), 4) as total_staked
+    , SUM(COALESCE(st.entries, 0) - COALESCE(st.exits, 0))
+          OVER (ORDER BY p.week_end ASC) as active_stakers
     , COALESCE(wns.new_stakers, 0) as new_stakers
 FROM prices p
-LEFT JOIN weekly_stakes ws ON ws.week_end = p.week_end
-LEFT JOIN weekly_unstakes wu ON wu.week_end = p.week_end
+LEFT JOIN weekly_volumes wv ON wv.week_end = p.week_end
+LEFT JOIN staker_transitions st ON st.week_end = p.week_end
 LEFT JOIN weekly_new_stakers wns ON wns.week_end = p.week_end
 ORDER BY p.week_end ASC
