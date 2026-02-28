@@ -21,6 +21,7 @@ WITH dates AS (
         , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
     FROM prices.usd eth
     WHERE eth.contract_address = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        AND eth.blockchain = 'ethereum'
         AND eth.minute >= (SELECT start_date + INTERVAL '7' DAY FROM dates)
         AND eth.minute <= (SELECT end_date FROM dates)
         AND day_of_week(eth.minute) = 2
