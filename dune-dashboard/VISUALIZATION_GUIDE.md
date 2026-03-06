@@ -41,7 +41,7 @@
 ---
 
 ## Query 05 — `05_summary_counters.sql`
-**Save as:** "Botto - Summary KPIs"
+**Save as:** "Botto - Revenue KPIs"
 
 Create **one Counter widget per metric** (each is a separate visualization from the same query):
 
@@ -53,10 +53,18 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 | 4 | **Counter** | Secondary Revenue | `total_secondary_revenue` | Suffix: `ETH` |
 | 5 | **Counter** | 1/1 Artworks Sold | `artworks_sold` | |
 | 6 | **Counter** | 1/1 Art Volume | `total_art_volume` | Suffix: `ETH` |
-| 6 | **Counter** | BOTTO Burned | `total_botto_burnt` | Suffix: `BOTTO` |
-| 9 | **Counter** | BOTTO Price | `current_botto_price` | Prefix: `$` |
-| 10 | **Counter** | Rewards Distributed | `total_rewards_distributed` | Suffix: `ETH` |
-| 11 | **Counter** | Total Staked | `total_staked` | Suffix: `BOTTO` |
+
+---
+
+## Query 05b — `05b_token_counters.sql`
+**Save as:** "Botto - Token KPIs"
+
+| Viz # | Type | Title | Column | Prefix/Suffix |
+|-------|------|-------|--------|---------------|
+| 1 | **Counter** | BOTTO Burned | `total_botto_burnt` | Suffix: `BOTTO` |
+| 2 | **Counter** | BOTTO Price | `current_botto_price` | Prefix: `$` |
+| 3 | **Counter** | Rewards Distributed | `total_rewards_distributed` | Suffix: `ETH` |
+| 4 | **Counter** | Total Staked | `total_staked` | Suffix: `BOTTO` |
 
 ---
 
@@ -103,10 +111,11 @@ Create **one Counter widget per metric** (each is a separate visualization from 
 
 | Viz # | Type | Title | Settings |
 |-------|------|-------|----------|
-| 1 | **Stacked Area** | Treasury ETH Holdings | X: `week_end` · Y: `eth_balance`, `steth_balance` · Stacking: **stacked** · Labels: "Native ETH" / "stETH (Lido)" |
-| 2 | **Bar Chart** | Treasury ETH Flows | X: `week_end` · Y: `eth_inflow` (green), `eth_outflow` (red) · Stacking: **grouped** |
-| 3 | **Line Chart** | Treasury Value (USD) | X: `week_end` · Y: `total_eth_usd` |
-| 4 | **Line Chart** | Treasury BOTTO Balance | X: `week_end` · Y: `botto_balance` |
+| 1 | **Counter** | Treasury ETH | Column: `total_eth_value` · Suffix: `ETH` · Row limit: 1, sort `week_end` desc (latest value) |
+| 2 | **Counter** | Treasury USD | Column: `total_eth_usd` · Prefix: `$` · Row limit: 1, sort `week_end` desc |
+| 3 | **Counter** | Treasury BOTTO | Column: `botto_balance` · Suffix: `BOTTO` · Row limit: 1, sort `week_end` desc |
+| 5 | **Stacked Area** | Treasury ETH Composition | X: `week_end` · Y: `eth_balance`, `weth_balance`, `steth_balance`, `wsteth_balance` · Stacking: **stacked** · Labels: "Native ETH" / "WETH" / "stETH" / "wstETH" |
+| 6 | **Line Chart** | Treasury BOTTO Balance | X: `week_end` · Y: `botto_balance` |
 
 ---
 
@@ -186,13 +195,14 @@ Row 10: [DEX Volume by Chain (Q13 viz 1)]      [Cumulative DEX Volume (Q13 viz 2
 
 ── TREASURY & REWARDS ────────────────────────────────────────
 
-Row 11: [Treasury ETH Balance (Q10 viz 1)]     [Treasury USD (Q10 viz 3)]
+Row 11: [Counter]          [Counter]         [Counter]
+        Treasury ETH       Treasury USD      Treasury BOTTO
 
-Row 12: [Treasury ETH Flows (Q10 viz 2)]       [Treasury BOTTO (Q10 viz 4)]
+Row 12: [Treasury ETH Composition (Q10 viz 5)]  [Treasury BOTTO Balance (Q10 viz 6)]
 
-Row 13: [Weekly ETH Distributed (Q12 viz 1)]   [Cumulative ETH Distributed (Q12 viz 2)]
+Row 14: [Weekly ETH Distributed (Q12 viz 1)]   [Cumulative ETH Distributed (Q12 viz 2)]
 
-Row 14: [Weekly Claimers (Q12 viz 3)]          [Cumulative USD Distrib (Q12 viz 4)]
+Row 15: [Weekly Claimers (Q12 viz 3)]          [Cumulative USD Distrib (Q12 viz 4)]
 
 ── GOVERNANCE ────────────────────────────────────────────────
 

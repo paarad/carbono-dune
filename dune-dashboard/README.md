@@ -13,7 +13,7 @@
 | 7 | `07_collection_counts.sql` | **Table** | Count of artworks per collection/period |
 | 8 | `08_snapshot_governance.sql` | **Table + Bar** | Snapshot governance proposals & monthly aggregates |
 | 9 | `09_token_supply_breakdown.sql` | **Stacked Area** | BOTTO token supply by category (burned, staked, LP, etc.) |
-| 10 | `10_treasury_balance.sql` | **Area + Bar** | Treasury ETH/BOTTO balance with inflows/outflows |
+| 10 | `10_treasury_balance.sql` | **Stacked Area + Line** | Treasury ETH balance breakdown & BOTTO holdings |
 | 11 | `11_staking_metrics.sql` | **Area + Line + Bar** | Staking volume, total staked, new/unique stakers |
 | 12 | `12_rewards_distribution.sql` | **Bar + Area + Line** | ETH rewards distributed, USD value, claimers |
 | 13 | `13_dex_volume.sql` | **Bar + Line** | DEX trading volume (Ethereum + Base) |
@@ -99,14 +99,14 @@ Create **6 counter widgets** from `05_summary_counters.sql`:
 
 #### Row 10 (side by side):
 
-**Left: Treasury Balance** (from Query 10)
-- Chart type: **Area** for `eth_balance`
-- Overlay **Bar** for `eth_inflow` (green), `eth_outflow` (red)
+**Left: Treasury ETH Composition** (from Query 10)
+- Chart type: **Stacked Area**
 - X-axis: `week_end`
+- Y-series: `eth_balance`, `weth_balance`, `steth_balance`, `wsteth_balance`
 
-**Right: Treasury USD** (from Query 10)
+**Right: Treasury USD Value** (from Query 10)
 - Chart type: **Line**
-- X-axis: `week_end`, Y-axis: `eth_balance_usd`
+- X-axis: `week_end`, Y-axis: `total_eth_usd`
 
 #### Row 11: Staking Metrics (from Query 11)
 
