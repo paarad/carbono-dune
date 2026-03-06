@@ -164,5 +164,45 @@ SELECT * FROM (
           304,314,327,328,334,343,351,360,373,376,379,385,390,393,394,395,397,
           400,401,404,407,409,411,412,413,416,417,418,419,420,421)
 
+    UNION ALL
+    -- Pepe collab (10.89 ETH to botto.eth)
+    SELECT CAST(bc.block_time AS DATE), 'Pepe Collab', '',
+        CAST(bc.value AS DOUBLE) / 1e18
+    FROM ethereum.traces bc
+    WHERE bc.tx_hash = 0x39430d2d1be3e3d03e0350ab0414e520b440e231dbfc29426fdf4e410040bd23
+      AND bc.block_number = 20876061
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+
+    UNION ALL
+    -- Botto P5 ETH portion (150.829 ETH)
+    SELECT CAST(bc.block_time AS DATE), 'Botto P5', '',
+        CAST(bc.value AS DOUBLE) / 1e18
+    FROM ethereum.traces bc
+    WHERE bc.tx_hash = 0xb6b00f67e4e08c9017010f28fd1acfc4ff564cdb1b9cd6c9728b586c559778bb
+      AND bc.block_number = 21973515
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+
+    UNION ALL
+    -- Botto P5 ETH portion (54.453 ETH)
+    SELECT CAST(bc.block_time AS DATE), 'Botto P5', '',
+        CAST(bc.value AS DOUBLE) / 1e18
+    FROM ethereum.traces bc
+    WHERE bc.tx_hash = 0xdb7250925cc12fdf6a78a47b225b668581b19c5c184639164b58ecdc6853233b
+      AND bc.block_number = 21932218
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+
+    UNION ALL
+    -- Botto P5 USDC portion (52,597.67 USDC converted to ETH at tx time)
+    SELECT CAST(t.evt_block_time AS DATE), 'Botto P5 (USDC)', '',
+        CAST(t.value AS DOUBLE) / 1e6 / COALESCE(ep.eth_price, 1)
+    FROM erc20_ethereum.evt_Transfer t
+    JOIN eth_prices ep
+        ON DATE_TRUNC('week', CAST(t.evt_block_time AS TIMESTAMP) - INTERVAL '1' day) + INTERVAL '1' day = ep.week
+    WHERE t.evt_tx_hash = 0x53a0f2b5b63e628484962572270497633be244452a412623d68093078c8a4d78
+      AND t.contract_address = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+
 ) collabs
 ORDER BY mint_date ASC

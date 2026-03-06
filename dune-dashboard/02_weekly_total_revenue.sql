@@ -340,6 +340,45 @@ WITH dates AS (
           400,401,404,407,409,411,412,413,416,417,418,419,420,421)
       AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
     GROUP BY p.week_end
+    UNION ALL
+    -- Pepe collab (10.89 ETH to botto.eth)
+    SELECT p.week_end, CAST(bc.value AS DOUBLE) / 1e18
+    FROM ethereum.traces bc
+    JOIN prices p ON bc.block_time >= p.week_start AND bc.block_time < p.week_end
+    WHERE bc.tx_hash = 0x39430d2d1be3e3d03e0350ab0414e520b440e231dbfc29426fdf4e410040bd23
+      AND bc.block_number = 20876061
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+    UNION ALL
+    -- Botto P5 ETH portion (150.829 ETH)
+    SELECT p.week_end, CAST(bc.value AS DOUBLE) / 1e18
+    FROM ethereum.traces bc
+    JOIN prices p ON bc.block_time >= p.week_start AND bc.block_time < p.week_end
+    WHERE bc.tx_hash = 0xb6b00f67e4e08c9017010f28fd1acfc4ff564cdb1b9cd6c9728b586c559778bb
+      AND bc.block_number = 21973515
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+    UNION ALL
+    -- Botto P5 ETH portion (54.453 ETH)
+    SELECT p.week_end, CAST(bc.value AS DOUBLE) / 1e18
+    FROM ethereum.traces bc
+    JOIN prices p ON bc.block_time >= p.week_start AND bc.block_time < p.week_end
+    WHERE bc.tx_hash = 0xdb7250925cc12fdf6a78a47b225b668581b19c5c184639164b58ecdc6853233b
+      AND bc.block_number = 21932218
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+    UNION ALL
+    -- Botto P5 USDC portion (52,597.67 USDC converted to ETH at tx time)
+    SELECT p.week_end,
+        CAST(t.value AS DOUBLE) / 1e6 / MAX(ep.price)
+    FROM erc20_ethereum.evt_Transfer t
+    JOIN prices p ON t.evt_block_time >= p.week_start AND t.evt_block_time < p.week_end
+    JOIN prices.usd ep
+        ON ep.contract_address = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        AND ep.minute = date_trunc('minute', t.evt_block_time)
+    WHERE t.evt_tx_hash = 0x53a0f2b5b63e628484962572270497633be244452a412623d68093078c8a4d78
+      AND t.contract_address = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    GROUP BY p.week_end, t.value
 )
 
 , botto_burns AS (
@@ -348,7 +387,6 @@ WITH dates AS (
     JOIN prices p ON bb.evt_block_time >= p.week_start AND bb.evt_block_time < p.week_end
     WHERE bb.evt_block_time >= (SELECT start_date FROM dates) AND bb.evt_block_time < (SELECT end_date FROM dates)
       AND contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
-      AND "from" = 0x39c0aa77b2f4283bc5dd6b2bc707c3a6bc025391
       AND "to" = 0x000000000000000000000000000000000000dead
     GROUP BY p.week_end
 )
