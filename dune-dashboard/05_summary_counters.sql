@@ -1,32 +1,15 @@
 -- ============================================================
--- BOTTO DASHBOARD: Summary Counters (KPIs)
+-- BOTTO DASHBOARD: Revenue Counters
 -- ============================================================
 -- Chart: Counter widgets (one per metric)
--- Create one counter visualization per column in the output
+-- Covers: art revenue, pipes, pass, collabs, grand total
+-- Token/protocol counters split into 05b_token_counters.sql
 -- ============================================================
 
 WITH dates AS (
     SELECT
         TIMESTAMP '2021-10-19 22:00:00' as start_date,
         current_timestamp as end_date
-)
-
-, prices AS (
-    SELECT
-          date_trunc('hour', eth.minute) as week_end
-        , date_trunc('hour', eth.minute - INTERVAL '7' DAY) as week_start
-        , MIN(botto.price) as botto_price
-    FROM prices.usd eth
-    JOIN prices.usd botto
-        ON botto.minute = eth.minute
-    WHERE   botto.contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
-        AND eth.contract_address = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-        AND botto.minute >= (SELECT start_date + INTERVAL '7' DAY FROM dates)
-        AND botto.minute <= (SELECT end_date FROM dates)
-        AND day_of_week(botto.minute) = 2
-        AND hour(botto.minute) = 22
-        AND minute(botto.minute) = 0
-    GROUP BY 1, 2
 )
 
 , superrare_sales_raw AS (
@@ -294,47 +277,47 @@ WITH dates AS (
           304,314,327,328,334,343,351,360,373,376,379,385,390,393,394,395,397,
           400,401,404,407,409,411,412,413,416,417,418,419,420,421)
       AND bc.royalty_fee_receive_address = 0x35bb964878d7b6ddfa69cf0b97ee63fa3c9d9b49
+    UNION ALL
+    -- Pepe collab (10.89 ETH to botto.eth)
+    SELECT CAST(bc.value AS DOUBLE) / 1e18, 1
+    FROM ethereum.traces bc
+    WHERE bc.tx_hash = 0x39430d2d1be3e3d03e0350ab0414e520b440e231dbfc29426fdf4e410040bd23
+      AND bc.block_number = 20876061
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+    UNION ALL
+    -- Botto P5 ETH portion (150.829 ETH)
+    SELECT CAST(bc.value AS DOUBLE) / 1e18, 1
+    FROM ethereum.traces bc
+    WHERE bc.tx_hash = 0xb6b00f67e4e08c9017010f28fd1acfc4ff564cdb1b9cd6c9728b586c559778bb
+      AND bc.block_number = 21973515
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+    UNION ALL
+    -- Botto P5 ETH portion (54.453 ETH)
+    SELECT CAST(bc.value AS DOUBLE) / 1e18, 1
+    FROM ethereum.traces bc
+    WHERE bc.tx_hash = 0xdb7250925cc12fdf6a78a47b225b668581b19c5c184639164b58ecdc6853233b
+      AND bc.block_number = 21932218
+      AND bc."to" = 0x000a837ddd815bcba0fa91a98a50aa7a3fa62c9c
+      AND bc.value > UINT256 '0'
+    UNION ALL
+    -- Botto P5 USDC portion (52,597.67 USDC converted to ETH at tx time)
+    SELECT CAST(t.value AS DOUBLE) / 1e6 / MAX(ep.price), 1
+    FROM erc20_ethereum.evt_Transfer t
+    JOIN prices.usd ep
+        ON ep.contract_address = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        AND ep.minute = date_trunc('minute', t.evt_block_time)
+    WHERE t.evt_tx_hash = 0x53a0f2b5b63e628484962572270497633be244452a412623d68093078c8a4d78
+      AND t.contract_address = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+    GROUP BY t.value
 )
 
 , collab_totals AS (
-    SELECT SUM(quantity) as collab_quantity
+    SELECT ROUND(SUM(revenue), 4) as collab_revenue, SUM(quantity) as collab_quantity
     FROM collaborations
 )
 
-, burn_totals AS (
-    SELECT ROUND(SUM(bb.value * power(10, -18)), 4) as total_botto_burnt
-    FROM botto_ethereum.Botto_evt_Transfer bb
-    WHERE bb.evt_block_time >= (SELECT start_date FROM dates) AND bb.evt_block_time < (SELECT end_date FROM dates)
-      AND contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
-      AND "from" = 0x39c0aa77b2f4283bc5dd6b2bc707c3a6bc025391
-      AND "to" = 0x000000000000000000000000000000000000dead
-)
-
-, rewards_totals AS (
-    SELECT ROUND(SUM(tr.value / 1e18), 4) as total_eth_distributed
-    FROM ethereum.traces tr
-    WHERE tr."from" = 0x93298241417a63469b6f8f080b4878749acb4c47
-      AND tr.block_time >= (SELECT start_date FROM dates)
-      AND tr.block_time < (SELECT end_date FROM dates)
-      AND tr.success = true
-      AND tr.type NOT IN ('delegatecall', 'staticcall')
-      AND tr.value > 0
-)
-
-, staking_totals AS (
-    SELECT ROUND(
-        SUM(CASE WHEN t."to" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6 THEN CAST(t.value AS DOUBLE) / 1e18 ELSE 0 END)
-      - SUM(CASE WHEN t."from" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6 THEN CAST(t.value AS DOUBLE) / 1e18 ELSE 0 END)
-    , 4) as total_staked
-    FROM erc20_ethereum.evt_Transfer t
-    WHERE t.contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
-      AND (t."to" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6
-           OR t."from" = 0x19cd3998f106ecc40ee7668c19c47e18b491e8a6)
-)
-
-, current_price AS (
-    SELECT botto_price FROM prices ORDER BY week_end DESC LIMIT 1
-)
 
 SELECT
     -- Headline KPIs
@@ -345,12 +328,11 @@ SELECT
     , COALESCE(pass.pass_primary, 0) + COALESCE(passs.pass_secondary, 0) as total_pass_revenue
     , ROUND(art.total_art_revenue
             + COALESCE(pt.pipe_primary, 0) + COALESCE(pst.pipe_secondary, 0)
-            + COALESCE(pass.pass_primary, 0) + COALESCE(passs.pass_secondary, 0), 4) as grand_total_revenue
+            + COALESCE(pass.pass_primary, 0) + COALESCE(passs.pass_secondary, 0)
+            + COALESCE(ct.collab_revenue, 0), 4) as grand_total_revenue
     , art.total_art_volume
     , art.artworks_sold_primary as artworks_sold
     , COALESCE(pt.pipe_primary_qty, 0) + COALESCE(ct.collab_quantity, 0) as non_one_of_one_sold
-    , burn.total_botto_burnt
-    , cp.botto_price as current_botto_price
     -- Per-period breakdowns
     , art.genesis_revenue, art.fragmentation_revenue, art.paradox_revenue
     , art.rebellion_revenue, art.absurdism_revenue, art.interstice_revenue
@@ -362,16 +344,9 @@ SELECT
     , COALESCE(pst.pipe_secondary, 0) as pipe_secondary_revenue
     , COALESCE(pass.pass_primary, 0) as pass_primary_revenue
     , COALESCE(passs.pass_secondary, 0) as pass_secondary_revenue
-    -- Rewards distributed to stakers
-    , COALESCE(rw.total_eth_distributed, 0) as total_rewards_distributed
-    , COALESCE(st.total_staked, 0) as total_staked
 FROM art_totals art
 CROSS JOIN pipe_totals pt
 CROSS JOIN pipe_sec_totals pst
 CROSS JOIN pass_totals pass
 CROSS JOIN pass_sec_totals passs
 CROSS JOIN collab_totals ct
-CROSS JOIN burn_totals burn
-CROSS JOIN current_price cp
-CROSS JOIN rewards_totals rw
-CROSS JOIN staking_totals st
