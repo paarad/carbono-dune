@@ -42,7 +42,6 @@ WITH dates AS (
     WHERE bb.evt_block_time >= (SELECT start_date FROM dates)
     AND   bb.evt_block_time < (SELECT end_date FROM dates)
     AND contract_address = 0x9dfad1b7102d46b1b197b90095b5c4e9f5845bba
-    AND "from" = 0x39c0aa77b2f4283bc5dd6b2bc707c3a6bc025391
     AND "to" = 0x000000000000000000000000000000000000dead
     GROUP BY p.week_end
 )
